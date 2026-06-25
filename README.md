@@ -1,6 +1,6 @@
 # P6.1 - Gestion d'utilisateurs NFS/NIS
 
-Projet d'Administration Linux realise par Yann RENVOISE et Valentin MENON.
+Projet d'Administration Linux realise par Yann RENVOISÉ et Valentin MENON.
 
 ## Sujet
 
@@ -8,10 +8,27 @@ Creer un script Bash interactif permettant l'ajout et le retrait d'un ou plusieu
 
 L'environnement utilise deux distributions Debian sous WSL2 :
 
-- `debian-nfs-server` : serveur NFS et NIS
-- `debian-nfs-client` : client NFS/NIS
+- `wsl -d debian-nfs-server` : serveur NFS/NIS
+- `wsl -d debian-nfs-client` : client NFS/NIS
 
 Le serveur exporte `/srv/nfs/home` et le client monte ce partage dans `/mnt/FromNFS`. Le domaine NIS utilise le nom `iut`.
+
+Quelques ajustement sont à faire pour régler le contexte d'ip partagée pour les deux,
+
+- `nano /etc/hosts` : for both sides, edit hostnames and add "172.27.3.231  nfs-server nfs-client"
+- `rpcinfo -p localhost` : show nfs but no ypserve
+- `ls -l /mnt/FromNFS` : lets client acess list of users
+
+Après utilisation du script côté serveur, on peut bien constater côté client les modifications.
+
+Sous WSL, `rpcbind` et `ypbind` peuvent etre instables avec `systemd`. C'est une limite de l'environnement WSL, pas du script. La map NIS est bien servie par le serveur et accessible depuis le client avec ypcat -d iut -h nfs-server passwd.byname.
+
+Étapes à démontrer dans la présentation :
+
+1. ajout d'un utilisateur cote serveur avec le script côté serveur;
+2. regeneration des maps NIS ;
+3. apparition du home dans `/mnt/FromNFS` côté client ;
+4. afficher les nouveaux users avec `ls -l /mnt/FromNFS` côté client.
 
 ## Prerequis
 
@@ -44,6 +61,7 @@ Le serveur exporte `/srv/nfs/home` et le client monte ce partage dans `/mnt/From
 Le script principal doit etre execute cote serveur NIS :
 
 ```bash
+cd "Yann Renvoisé/EFREI/S8/AdministrationLinux/Projet/P6.1_NFS-NIS_Script_Interactif"
 sudo bash scripts/gestion_users_nis.sh
 ```
 
