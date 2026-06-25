@@ -177,7 +177,10 @@ add_user() {
     fi
 
     echo "Definition du mot de passe pour $username"
-    passwd "$username"
+    if ! passwd "$username"; then
+        print_error "mot de passe non defini pour $username"
+        return 1
+    fi
 
     regenerate_nis_maps
     show_client_checks "$username"
@@ -282,13 +285,20 @@ delete_multiple_users() {
 }
 
 list_nis_users() {
-    if ypcat passwd >/tmp/nis_passwd.$$ 2>/dev/null; then
-        cut -d: -f1,3,6 /tmp/nis_passwd.$$
-        rm -f /tmp/nis_passwd.$$
+    local tmp_file
+
+    tmp_file="$(mktemp)" || {
+        print_error "creation fichier temporaire impossible."
+        return 1
+    }
+
+    if ypcat passwd >"$tmp_file" 2>/dev/null; then
+        cut -d: -f1,3,6 "$tmp_file"
+        rm -f "$tmp_file"
         return 0
     fi
 
-    rm -f /tmp/nis_passwd.$$
+    rm -f "$tmp_file"
     print_error "ypcat passwd indisponible."
     echo "Alternative cote serveur:"
     awk -F: -v min_uid=1000 '$3 >= min_uid { print $1 ":" $3 ":" $6 }' /etc/passwd
