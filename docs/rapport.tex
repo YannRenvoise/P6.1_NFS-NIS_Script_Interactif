@@ -1,0 +1,46 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+\geometry{margin=2.5cm}
+
+\title{P6.1 - Gestion d'utilisateurs NFS/NIS}
+\author{Yann RENVOISE \and Valentin MENON}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+
+Ce rapport presente un projet d'administration Linux autour de la gestion interactive d'utilisateurs dans un environnement NFS/NIS.
+
+\section{Contexte}
+
+L'environnement repose sur deux distributions Debian sous WSL2 : un serveur NFS/NIS et un client NFS/NIS.
+
+\section{Architecture}
+
+Le serveur centralise les comptes avec NIS et exporte les repertoires personnels avec NFS.
+
+\section{Script interactif}
+
+Cette section decrira la logique du script Bash de gestion des utilisateurs.
+
+\section{Tests}
+
+Cette section presentera les tests realises cote serveur et cote client.
+
+\section{Limites}
+
+Cette section indiquera les limites observees sous WSL.
+
+\section{Conclusion}
+
+\end{document}
