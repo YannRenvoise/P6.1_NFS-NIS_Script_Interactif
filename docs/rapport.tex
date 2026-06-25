@@ -5,8 +5,39 @@
 \usepackage[french]{babel}
 \usepackage{geometry}
 \usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
 
 \geometry{margin=2.5cm}
+\graphicspath{{images/}}
+
+\lstdefinestyle{bashstyle}{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible,
+    backgroundcolor=\color{gray!8}
+}
+
+\lstset{style=bashstyle}
+
+\newcommand{\captureplaceholder}[2]{
+    \begin{figure}[h]
+        \centering
+        \fbox{
+            \begin{minipage}{0.88\textwidth}
+                \centering
+                \vspace{1cm}
+                Capture a inserer : \texttt{docs/images/#1}
+
+                #2
+                \vspace{1cm}
+            \end{minipage}
+        }
+        \caption{#2}
+    \end{figure}
+}
 
 \title{P6.1 - Gestion d'utilisateurs NFS/NIS}
 \author{Yann RENVOISE \and Valentin MENON}
@@ -19,28 +50,161 @@
 
 \section{Introduction}
 
-Ce rapport presente un projet d'administration Linux autour de la gestion interactive d'utilisateurs dans un environnement NFS/NIS.
+Ce rapport presente un projet d'administration Linux autour de la gestion interactive d'utilisateurs dans un environnement NFS/NIS. L'objectif est de fournir un script Bash permettant d'ajouter, supprimer, lister et verifier des utilisateurs centralises par NIS, avec des repertoires personnels stockes sur un partage NFS.
 
 \section{Contexte}
 
-L'environnement repose sur deux distributions Debian sous WSL2 : un serveur NFS/NIS et un client NFS/NIS.
+L'environnement repose sur deux distributions Debian sous WSL2 :
+
+\begin{itemize}
+    \item \texttt{debian-nfs-server}, utilise comme serveur NFS et NIS ;
+    \item \texttt{debian-nfs-client}, utilise comme client NFS/NIS.
+\end{itemize}
+
+Le domaine NIS utilise le nom \texttt{iut}. Le serveur exporte \texttt{/srv/nfs/home}. Le client monte ce partage dans \texttt{/mnt/FromNFS}.
+
+\captureplaceholder{01-wsl-machines.png}{Liste des deux machines WSL avec \texttt{wsl -l -v}.}
 
 \section{Architecture}
 
 Le serveur centralise les comptes avec NIS et exporte les repertoires personnels avec NFS.
 
+\begin{itemize}
+    \item NIS centralise les informations utilisateurs et groupes.
+    \item NFS donne acces aux repertoires personnels depuis le client.
+    \item Le client interroge NIS avec \texttt{ypcat passwd} ou \texttt{getent passwd}.
+\end{itemize}
+
+\captureplaceholder{02-nfs-export-server.png}{Configuration ou verification de l'export NFS cote serveur.}
+
+\captureplaceholder{03-client-mount.png}{Montage NFS visible cote client dans \texttt{/mnt/FromNFS}.}
+
 \section{Script interactif}
 
-Cette section decrira la logique du script Bash de gestion des utilisateurs.
+Le script principal est \texttt{scripts/gestion\_users\_nis.sh}. Il est execute cote serveur NIS avec les droits root.
+
+\begin{lstlisting}[language=bash]
+sudo bash scripts/gestion_users_nis.sh
+\end{lstlisting}
+
+Le menu propose les actions suivantes :
+
+\begin{enumerate}
+    \item Ajouter un utilisateur
+    \item Supprimer un utilisateur
+    \item Ajouter plusieurs utilisateurs
+    \item Supprimer plusieurs utilisateurs
+    \item Lister les utilisateurs NIS
+    \item Verifier un utilisateur
+    \item Regenerer les maps NIS
+    \item Quitter
+\end{enumerate}
+
+\captureplaceholder{04-menu-script.png}{Menu interactif du script lance cote serveur.}
+
+\subsection{Verification des prerequis}
+
+Au lancement, le script verifie qu'il est execute en root. Il verifie aussi la presence des commandes necessaires : \texttt{useradd}, \texttt{userdel}, \texttt{passwd}, \texttt{make}, \texttt{ypcat} et \texttt{getent}.
+
+\begin{lstlisting}[language=bash]
+require_root
+check_required_commands
+\end{lstlisting}
+
+Cette partie evite de lancer une modification systeme dans un contexte incomplet.
+
+\subsection{Protection des comptes sensibles}
+
+Le script refuse la suppression ou la modification de comptes systeme importants comme \texttt{root}, \texttt{daemon}, \texttt{www-data} ou \texttt{systemd-network}.
+
+\begin{lstlisting}[language=bash]
+if is_dangerous_user "$username"; then
+    print_error "compte protege refuse: $username"
+    return 1
+fi
+\end{lstlisting}
+
+Cette verification limite le risque de casser le systeme.
+
+\subsection{Ajout d'un utilisateur}
+
+Pour ajouter un utilisateur, le script demande le nom, verifie qu'il est valide, controle qu'il n'existe pas deja, cree le compte, prepare le home NFS, demande le mot de passe puis regenere les maps NIS.
+
+\begin{lstlisting}[language=bash]
+useradd -m -d "${NFS_HOME_ROOT}/${username}" "$username"
+passwd "$username"
+make -C /var/yp
+\end{lstlisting}
+
+\captureplaceholder{05-add-user-server.png}{Ajout d'un utilisateur de test cote serveur.}
+
+\subsection{Suppression d'un utilisateur}
+
+Pour supprimer un utilisateur, le script demande une confirmation, lance \texttt{userdel}, propose la suppression du home NFS, puis regenere les maps NIS.
+
+\begin{lstlisting}[language=bash]
+userdel "$username"
+rm -rf -- "$home_dir"
+make -C /var/yp
+\end{lstlisting}
+
+La suppression du home est optionnelle pour eviter une perte de donnees involontaire.
+
+\subsection{Regeneration des maps NIS}
+
+Apres chaque modification, les maps NIS sont regenerees avec :
+
+\begin{lstlisting}[language=bash]
+make -C /var/yp
+\end{lstlisting}
+
+Cette commande rend les modifications visibles par les clients NIS.
 
 \section{Tests}
 
-Cette section presentera les tests realises cote serveur et cote client.
+Un test manuel est realise avec l'utilisateur \texttt{demoNIS}.
+
+\subsection{Ajout et verification}
+
+Cote serveur :
+
+\begin{lstlisting}[language=bash]
+sudo bash scripts/gestion_users_nis.sh
+\end{lstlisting}
+
+Cote client :
+
+\begin{lstlisting}[language=bash]
+ypcat passwd | grep demoNIS
+getent passwd demoNIS
+su - demoNIS
+\end{lstlisting}
+
+\captureplaceholder{06-client-ypcat-demo.png}{Verification de \texttt{demoNIS} avec \texttt{ypcat passwd} cote client.}
+
+\captureplaceholder{07-client-getent-demo.png}{Verification de \texttt{demoNIS} avec \texttt{getent passwd} cote client.}
+
+\captureplaceholder{08-client-su-demo.png}{Connexion avec \texttt{su - demoNIS} cote client.}
+
+\subsection{Suppression et verification}
+
+Apres suppression de \texttt{demoNIS} cote serveur, le client ne doit plus retrouver ce compte.
+
+\begin{lstlisting}[language=bash]
+ypcat passwd | grep demoNIS
+getent passwd demoNIS
+\end{lstlisting}
+
+\captureplaceholder{09-delete-user-server.png}{Suppression de \texttt{demoNIS} avec le script cote serveur.}
+
+\captureplaceholder{10-client-user-removed.png}{Verification cote client apres suppression de \texttt{demoNIS}.}
 
 \section{Limites}
 
-Cette section indiquera les limites observees sous WSL.
+Sous WSL2, certains services reseau Linux peuvent avoir un comportement different d'une machine Debian classique. Par exemple, \texttt{ypwhich} peut echouer avec une erreur de communication avec \texttt{ypbind}, meme si \texttt{ypcat passwd} fonctionne correctement. Pour ce projet, la validation principale repose donc sur \texttt{ypcat passwd}, \texttt{getent passwd} et une connexion utilisateur avec \texttt{su -}.
 
 \section{Conclusion}
+
+Le projet fournit un outil interactif permettant de gerer des utilisateurs NIS et leurs repertoires personnels NFS depuis le serveur. Le script automatise les operations principales, reduit les manipulations manuelles et garde des controles de securite sur les comptes systeme.
 
 \end{document}
