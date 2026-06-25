@@ -47,6 +47,17 @@ Le script principal doit etre execute cote serveur NIS :
 sudo bash scripts/gestion_users_nis.sh
 ```
 
+Menu disponible :
+
+1. Ajouter un utilisateur
+2. Supprimer un utilisateur
+3. Ajouter plusieurs utilisateurs
+4. Supprimer plusieurs utilisateurs
+5. Lister les utilisateurs NIS
+6. Verifier un utilisateur
+7. Regenerer les maps NIS
+8. Quitter
+
 Les verifications principales se font ensuite cote client :
 
 ```bash
@@ -73,8 +84,9 @@ getent passwd demoNIS
 su - demoNIS
 ```
 
-5. Cote serveur, supprimer `demoNIS` avec le script.
-6. Cote client, verifier que l'utilisateur n'apparait plus :
+5. Cote serveur, verifier l'utilisateur avec le menu `6`.
+6. Cote serveur, supprimer `demoNIS` avec le script.
+7. Cote client, verifier que l'utilisateur n'apparait plus :
 
 ```bash
 ypcat passwd | grep demoNIS
@@ -85,8 +97,8 @@ getent passwd demoNIS
 
 - [x] Initialiser la structure du projet
 - [x] Preparer le README
-- [ ] Creer le script interactif
-- [ ] Ajouter les fonctions d'ajout et suppression
-- [ ] Ajouter la regeneration des maps NIS
+- [x] Creer le script interactif
+- [x] Ajouter les fonctions d'ajout et suppression
+- [x] Ajouter la regeneration des maps NIS
 - [ ] Tester sur serveur et client WSL
 - [ ] Rediger le rapport LaTeX complet
