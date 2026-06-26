@@ -1,0 +1,14 @@
+# =============================================================================
+# NFS Exports Configuration
+# =============================================================================
+# /srv/nfs/home - Repertoire home partage pour tous les clients NIS
+# Options:
+#   sync        -crire synchronement (pas de cache)
+#   no_root_squash - ne pas mapper UID 0->nobody (permet root client acces)
+#   no_subtree_check - desactiver la verification subtree
+#   all_squash  - mapper tous les utilisateurs->nobody (incompatible avec NIS, donc NON)
+#   anonuid=65534 - UID anonyme
+#   anongid=65534 - GID anonyme
+# =============================================================================
+
+/srv/nfs/home    172.20.0.0/24(sync,no_root_squash,no_subtree_check)

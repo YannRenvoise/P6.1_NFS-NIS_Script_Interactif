@@ -1,0 +1,76 @@
+version: "3.8"
+
+services:
+  nis-server:
+    build:
+      context: ./docker/nis-server
+      dockerfile: Dockerfile
+    container_name: nis-server
+    hostname: nis-server
+    domainname: localdomain
+    environment:
+      - NIS_DOMAIN=localdomain
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    ports:
+      - "111:111/udp"
+      - "111:111/tcp"
+      - "749:749/tcp"
+      - "811:811/udp"
+    volumes:
+      - nis-data:/var/yp
+    networks:
+      nis-nfs-net:
+        ipv4_address: 172.20.0.2
+    restart: unless-stopped
+
+  nfs-server:
+    build:
+      context: ./docker/nfs-server
+      dockerfile: Dockerfile
+    container_name: nfs-server
+    hostname: nfs-server
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    ports:
+      - "2049:2049/tcp"
+      - "2049:2049/udp"
+    volumes:
+      - nfs-data:/srv/nfs/home
+    networks:
+      nis-nfs-net:
+        ipv4_address: 172.20.0.3
+    restart: unless-stopped
+
+  nis-client:
+    build:
+      context: ./docker/nis-client
+      dockerfile: Dockerfile
+    container_name: nis-client
+    hostname: nis-client
+    domainname: localdomain
+    environment:
+      - NIS_DOMAIN=localdomain
+    volumes:
+      - nfs-home:/home
+    networks:
+      nis-nfs-net:
+        ipv4_address: 172.20.0.4
+    depends_on:
+      - nis-server
+      - nfs-server
+    restart: unless-stopped
+
+networks:
+  nis-nfs-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  nis-data:
+  nfs-data:
+  nfs-home:
